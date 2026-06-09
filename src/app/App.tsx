@@ -34,7 +34,7 @@ export default function App() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [remainingSeats, setRemainingSeats] = useState<number | null>(null);
+  const [remainingSeats, setRemainingSeats] = useState<number>(30);
   const totalSeats = 30;
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export default function App() {
       if (typeof data.remainingSeats === 'number') {
         setRemainingSeats(data.remainingSeats);
       } else {
-        setRemainingSeats(prev => prev === null ? null : Math.max(0, prev - 1));
+        setRemainingSeats(prev => Math.max(0, prev - 1));
       }
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -82,9 +82,7 @@ export default function App() {
     }
   };
 
-  const progressPercentage = remainingSeats === null
-    ? 0
-    : ((totalSeats - remainingSeats) / totalSeats) * 100;
+  const progressPercentage = ((totalSeats - remainingSeats) / totalSeats) * 100;
 
   if (isSubmitted) {
     return (
@@ -180,7 +178,7 @@ export default function App() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mb-3">
             <p className="text-base md:text-lg font-bold flex items-center gap-2 text-white">
               <span className="animate-pulse text-2xl">🔥</span>
-              โควตาจำกัด: เหลือเพียง <span className="text-yellow-300 text-2xl md:text-3xl font-black mx-1">{remainingSeats ?? '...'}</span> จาก {totalSeats} ที่นั่งสุดท้าย
+              โควตาจำกัด: เหลือเพียง <span className="text-yellow-300 text-2xl md:text-3xl font-black mx-1">{remainingSeats}</span> จาก {totalSeats} ที่นั่งสุดท้าย
             </p>
           </div>
           <div className="relative h-4 bg-blue-900 rounded-full overflow-hidden">
