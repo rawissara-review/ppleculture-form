@@ -20,7 +20,7 @@ const roleOptions = [
   { value: 'other', emoji: '💼', label: 'Other', subtitle: 'อื่นๆ' },
 ];
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxbLAZ3wqVpKYVh8Sc8YRIRaZ3kG8NqAW5aq_TVk9sc4Mj2WU3MDFFoYIxjn3XzYfVhnw/exec';
+const API_URL = '/api/register';
 
 export default function App() {
   const [formData, setFormData] = useState<FormData>({
@@ -40,18 +40,18 @@ export default function App() {
   useEffect(() => {
     const fetchSeats = async () => {
       try {
-        const res = await fetch(SCRIPT_URL);
+        const res = await fetch(API_URL);
         const data = await res.json();
         if (typeof data.remainingSeats === 'number') {
           setRemainingSeats(data.remainingSeats);
         }
       } catch {
-        setRemainingSeats(totalSeats); // fallback if fetch fails
+        // keep current value on network error
       }
     };
 
     fetchSeats();
-    const interval = setInterval(fetchSeats, 30000); // refresh every 30s
+    const interval = setInterval(fetchSeats, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -60,27 +60,20 @@ export default function App() {
     setIsSubmitting(true);
 
     try {
-      // Google Apps Script doesn't support CORS preflight, so we use no-cors mode.
-      // The request is still sent and saved to the sheet — we just can't read the response.
-      await fetch(SCRIPT_URL, {
+      const res = await fetch(API_URL, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+      const data = await res.json();
 
       setIsSubmitted(true);
-      setRemainingSeats(prev => prev === null ? null : Math.max(0, prev - 1));
-      // Re-fetch from sheet after 2s to confirm accurate count
-      setTimeout(async () => {
-        try {
-          const res = await fetch(SCRIPT_URL);
-          const data = await res.json();
-          if (typeof data.remainingSeats === 'number') {
-            setRemainingSeats(data.remainingSeats);
-          }
-        } catch { /* keep optimistic value */ }
-      }, 2000);
+      // Use server-confirmed count if available, otherwise decrement locally
+      if (typeof data.remainingSeats === 'number') {
+        setRemainingSeats(data.remainingSeats);
+      } else {
+        setRemainingSeats(prev => prev === null ? null : Math.max(0, prev - 1));
+      }
     } catch (error) {
       console.error('Error submitting form:', error);
       alert('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
