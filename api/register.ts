@@ -1,7 +1,7 @@
 export const config = { runtime: 'edge' };
 
 const SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbxbLAZ3wqVpKYVh8Sc8YRIRaZ3kG8NqAW5aq_TVk9sc4Mj2WU3MDFFoYIxjn3XzYfVhnw/exec';
+  'https://script.google.com/macros/s/AKfycbyPccAoD15DogfXH9WrABUiEiAEOLXpU2BJS4YWSinpK91_tewH05HrQthen3qXwjBPqw/exec';
 
 export default async function handler(req: Request) {
   // GET — return real-time seat availability from Google Sheet
