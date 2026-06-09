@@ -1,0 +1,306 @@
+/**
+ * Google Apps Script for Game Industry Event Registration Form
+ *
+ * Instructions:
+ * 1. Open your Google Sheet
+ * 2. Go to Extensions > Apps Script
+ * 3. Copy and paste this entire code
+ * 4. Click Deploy > New deployment > Web app
+ * 5. Set "Execute as: Me" and "Who has access: Anyone"
+ * 6. Copy the web app URL and paste it in App.tsx
+ */
+
+// Returns real-time seat availability — called by the web form on load and every 30s
+function doGet() {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const totalSeats = 30;
+    const registeredCount = Math.max(0, sheet.getLastRow() - 1); // subtract header row
+    const remainingSeats = Math.max(0, totalSeats - registeredCount);
+
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        status: 'ok',
+        remainingSeats: remainingSeats,
+        registeredCount: registeredCount,
+        totalSeats: totalSeats
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ status: 'error', message: String(error) })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// Main function to handle POST requests from the registration form
+// NOTE: The web form sends Content-Type: text/plain (required for no-cors browser requests).
+// e.postData.contents still contains the JSON string — JSON.parse works correctly.
+function doPost(e) {
+  try {
+    // Parse the incoming JSON data
+    const data = JSON.parse(e.postData.contents);
+
+    // Get the active spreadsheet and sheet
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+    // Translate role value to Thai
+    const roleTranslation = {
+      'developer': 'ผู้พัฒนาเกม / สตูดิโอทำเกม',
+      'publisher': 'ผู้จัดจำหน่าย / นำเข้า / โปรโมตเกม',
+      'influencer': 'Influencer / สื่อมวลชน',
+      'esports': 'บุคลากรด้านอีสปอร์ต',
+      'designer': 'Designer / ครีเอทีฟ',
+      'general': 'ผู้สนใจทั่วไป / ผู้เล่นเกม',
+      'other': 'อื่นๆ'
+    };
+
+    const roleDisplay = data.role === 'other'
+      ? `อื่นๆ - ${data.otherRole}`
+      : roleTranslation[data.role] || data.role;
+
+    // Append the data to the sheet
+    sheet.appendRow([
+      new Date(), // Timestamp
+      data.fullName,
+      data.organization,
+      roleDisplay,
+      data.email,
+      data.secondaryContact || '-'
+    ]);
+
+    // Optional: Send confirmation email via Resend
+    // Uncomment the line below after setting up sendConfirmationEmail function
+    // sendConfirmationEmail(data.email, data.fullName);
+
+    // Calculate remaining seats (optional - for dynamic updates)
+    const totalSeats = 30;
+    const registeredCount = sheet.getLastRow() - 1; // Subtract header row
+    const remainingSeats = Math.max(0, totalSeats - registeredCount);
+
+    // Return success response
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        status: 'success',
+        message: 'ลงทะเบียนสำเร็จ',
+        remainingSeats: remainingSeats
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    // Return error response
+    Logger.log('Error: ' + error.toString());
+
+    return ContentService.createTextOutput(
+      JSON.stringify({
+        status: 'error',
+        message: error.toString()
+      })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// Optional: Function to send confirmation emails via Resend
+function sendConfirmationEmail(email, fullName) {
+  // IMPORTANT: Replace with your actual Resend API key
+  const RESEND_API_KEY = 'YOUR_RESEND_API_KEY';
+
+  // IMPORTANT: Replace with your verified domain in Resend
+  const FROM_EMAIL = 'noreply@yourdomain.com';
+
+  const emailPayload = {
+    from: `People's Culture <${FROM_EMAIL}>`,
+    to: email,
+    subject: '✅ ยืนยันการลงทะเบียน - เวทีเสวนาอุตสาหกรรมเกมและอีสปอร์ตไทย',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+              background-color: #0f172a;
+              color: #ffffff;
+              padding: 20px;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+              border: 2px solid #f97316;
+              border-radius: 16px;
+              padding: 40px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            .title {
+              font-size: 28px;
+              font-weight: bold;
+              background: linear-gradient(90deg, #f97316 0%, #ec4899 50%, #38bdf8 100%);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+              margin-bottom: 10px;
+            }
+            .event-details {
+              background: #1e293b;
+              border: 1px solid #38bdf8;
+              border-radius: 12px;
+              padding: 20px;
+              margin: 20px 0;
+            }
+            .detail-row {
+              display: flex;
+              margin: 10px 0;
+              padding: 8px 0;
+            }
+            .detail-icon {
+              font-size: 24px;
+              margin-right: 12px;
+            }
+            .detail-label {
+              color: #94a3b8;
+              font-size: 14px;
+            }
+            .detail-value {
+              color: #ffffff;
+              font-weight: 600;
+              font-size: 16px;
+            }
+            .cta-button {
+              display: inline-block;
+              background: linear-gradient(90deg, #f97316 0%, #ec4899 100%);
+              color: white;
+              padding: 14px 32px;
+              border-radius: 8px;
+              text-decoration: none;
+              font-weight: bold;
+              margin: 20px 0;
+            }
+            .footer {
+              text-align: center;
+              color: #94a3b8;
+              font-size: 14px;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #334155;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 class="title">🎮 ยืนยันการลงทะเบียนสำเร็จ!</h1>
+              <p style="color: #94a3b8;">สวัสดีคุณ ${fullName}</p>
+            </div>
+
+            <p>ขอบคุณที่ลงทะเบียนเข้าร่วมเวทีเสวนาและรับฟังความคิดเห็นเพื่อขับเคลื่อนอุตสาหกรรมเกมและอีสปอร์ตในไทย</p>
+
+            <div class="event-details">
+              <h3 style="color: #38bdf8; margin-top: 0;">📋 รายละเอียดงาน</h3>
+
+              <div class="detail-row">
+                <div class="detail-icon">📅</div>
+                <div>
+                  <div class="detail-label">วันที่</div>
+                  <div class="detail-value">วันเสาร์ที่ 18 กรกฎาคม 2569</div>
+                </div>
+              </div>
+
+              <div class="detail-row">
+                <div class="detail-icon">⏰</div>
+                <div>
+                  <div class="detail-label">เวลา</div>
+                  <div class="detail-value">13.00 - 17.00 น.</div>
+                </div>
+              </div>
+
+              <div class="detail-row">
+                <div class="detail-icon">📍</div>
+                <div>
+                  <div class="detail-label">สถานที่</div>
+                  <div class="detail-value">Glowfish สาทร</div>
+                  <div style="color: #94a3b8; font-size: 14px; margin-top: 4px;">
+                    เลขที่ 100/58 ถนนสาทรเหนือ แขวงสีลม เขตบางรัก กรุงเทพฯ 10500
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="background: #f9731620; border-left: 4px solid #f97316; padding: 16px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>💡 สิ่งที่ควรทราบ:</strong></p>
+              <ul style="margin: 8px 0; padding-left: 20px;">
+                <li>กรุณามาถึงก่อนเวลา 15 นาที เพื่อลงทะเบียนและรับของที่ระลึก</li>
+                <li>แสดงอีเมลยืนยันฉบับนี้ที่จุดลงทะเบียนหน้างาน</li>
+                <li>การแต่งกาย: Smart Casual</li>
+              </ul>
+            </div>
+
+            <div style="text-align: center;">
+              <a href="https://maps.google.com/?q=Glowfish+Sathorn+Bangkok" class="cta-button">
+                🗺️ เปิดแผนที่
+              </a>
+            </div>
+
+            <p style="color: #94a3b8; font-size: 14px;">
+              หากมีคำถามหรือต้องการข้อมูลเพิ่มเติม กรุณาติดต่อเราทาง <a href="mailto:info@peoplesculture.or.th" style="color: #38bdf8;">info@peoplesculture.or.th</a>
+            </p>
+
+            <div class="footer">
+              <p><strong>People's Culture</strong></p>
+              <p>ปักวัฒนธรรมพรรคประชาชน</p>
+              <p style="font-size: 12px; color: #64748b;">
+                หากคุณไม่ได้ลงทะเบียนด้วยตัวเอง กรุณาเพิกเฉยอีเมลนี้
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+  };
+
+  const options = {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + RESEND_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    payload: JSON.stringify(emailPayload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch('https://api.resend.com/emails', options);
+    const responseCode = response.getResponseCode();
+
+    if (responseCode === 200) {
+      Logger.log('Email sent successfully to: ' + email);
+    } else {
+      Logger.log('Email sending failed: ' + response.getContentText());
+    }
+  } catch (error) {
+    Logger.log('Email error: ' + error.toString());
+  }
+}
+
+// Optional: Test function to verify the script works
+function testScript() {
+  const testData = {
+    postData: {
+      contents: JSON.stringify({
+        fullName: 'ทดสอบ ระบบ',
+        organization: 'บริษัททดสอบ จำกัด',
+        role: 'developer',
+        otherRole: '',
+        email: 'test@example.com',
+        secondaryContact: '081-234-5678'
+      })
+    }
+  };
+
+  const result = doPost(testData);
+  Logger.log(result.getContent());
+}
