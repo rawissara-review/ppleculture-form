@@ -34,7 +34,7 @@ export default function App() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [remainingSeats, setRemainingSeats] = useState<number>(30);
+  const [remainingSeats, setRemainingSeats] = useState<number>(40);
   const totalSeats = 40;
 
   useEffect(() => {
