@@ -14,7 +14,7 @@
 function doGet() {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    const totalSeats = 30;
+    const totalSeats = 40;
     const registeredCount = Math.max(0, sheet.getLastRow() - 1); // subtract header row
     const remainingSeats = Math.max(0, totalSeats - registeredCount);
 
@@ -74,7 +74,7 @@ function doPost(e) {
     // sendConfirmationEmail(data.email, data.fullName);
 
     // Calculate remaining seats (optional - for dynamic updates)
-    const totalSeats = 30;
+    const totalSeats = 40;
     const registeredCount = sheet.getLastRow() - 1; // Subtract header row
     const remainingSeats = Math.max(0, totalSeats - registeredCount);
 
